@@ -101,7 +101,9 @@ class FilesListActivity : AppCompatActivity() {
                 android.Manifest.permission.WRITE_EXTERNAL_STORAGE
             ) == PackageManager.PERMISSION_GRANTED
         ) {
-            //startdownloadingfile
+
+            startFileDownloading(activity, url, name, fileData.type)
+
         } else {
             requestPermissions(
                 arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE),
@@ -117,11 +119,45 @@ class FilesListActivity : AppCompatActivity() {
         fileData: String?
     ) {
 
+        val broadcastReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                val id = intent?.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+                if (id == downloadReference) {
+                    Toast.makeText(this@FilesListActivity, "File Downloaded..", Toast.LENGTH_SHORT)
+                        .show()
+
+                    adapter.updateFiles(
+                        FilesUiData(
+                            id = file.id,
+                            name = file.name,
+                            type = file.type,
+                            url = file.url,
+                            status = DownloadStatus.COMPLETED,
+                            position = file.position
+                        ), position
+                    )
+
+                }else if (downloadReference.toInt() == 0){
+                    adapter.updateFiles(
+                        FilesUiData(
+                            id = file.id,
+                            name = file.name,
+                            type = file.type,
+                            url = file.url,
+                            status = DownloadStatus.PENDING,
+                            position = file.position
+                        ), position
+                    )
+                }
+            }
+        }
+
         downloadReference = DownloadFilesManager.downloadFile(
             mainActivity,
             url,
             fileName,
-            fileData
+            fileData,
+            broadcastReceiver
         )
 
     }
@@ -137,7 +173,8 @@ class FilesListActivity : AppCompatActivity() {
                 if ((grantResults.isNotEmpty() &&
                             grantResults[0] == PackageManager.PERMISSION_GRANTED)
                 ) {
-                    //startdownloadingfile
+
+                    startFileDownloading(this, file.url, file.name, file.type)
 
                 } else {
                     Toast.makeText(this, "Permission Denied!", Toast.LENGTH_SHORT).show()

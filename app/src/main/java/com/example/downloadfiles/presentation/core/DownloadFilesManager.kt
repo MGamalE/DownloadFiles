@@ -1,7 +1,9 @@
 package com.example.downloadfiles.presentation.core
 
 import android.app.DownloadManager
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.IntentFilter
 import android.net.Uri
 import android.os.Environment
 import android.widget.Toast
@@ -13,6 +15,7 @@ object DownloadFilesManager {
         url: String?,
         title: String?,
         fileType: String?,
+        broadcastReceiver: BroadcastReceiver
     ): Long {
         var downloadReference: Long = 0
         val direct = File(
@@ -48,6 +51,12 @@ object DownloadFilesManager {
             e.printStackTrace()
             Toast.makeText(activity, "Something went wrong, try again..", Toast.LENGTH_SHORT).show()
         }
+
+        //Register broadcast receiver
+        activity.registerReceiver(
+            broadcastReceiver,
+            IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+        )
 
         return downloadReference
     }
