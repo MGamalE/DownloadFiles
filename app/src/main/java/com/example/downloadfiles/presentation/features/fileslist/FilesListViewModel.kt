@@ -5,18 +5,20 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.downloadfiles.domain.repository.FilesRepository
 import com.example.downloadfiles.entity.uifiles.FilesUiData
+import com.example.downloadfiles.presentation.core.mapToUiModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-class FilesListViewModel(private val repository: FilesRepository):ViewModel() {
+class FilesListViewModel(private val repository: FilesRepository) : ViewModel() {
     private val _result = MutableStateFlow<List<FilesUiData>>(emptyList())
     val result: StateFlow<List<FilesUiData>> = _result
 
-    fun requestListOfFiles(){
+    fun requestListOfFiles() {
         viewModelScope.launch {
-            repository.getFiles().collectLatest {
+            repository.getFiles().collectLatest { list ->
+                _result.value = list.mapToUiModel()
             }
         }
     }
