@@ -23,13 +23,27 @@ class FilesListActivity : AppCompatActivity() {
         setContentView(binding?.root)
 
 
+        triggerRefreshUi()
+
         inflateFilesRecyclerView()
 
         observeRequestGetListOfFiles()
+
+    }
+
+    private fun triggerRefreshUi() {
+        binding?.swipeRefresh?.setOnRefreshListener {
+            binding?.swipeRefresh?.isRefreshing = false
+        }
     }
 
 
     private fun observeRequestGetListOfFiles() {
+        /**
+         * Start loading
+         */
+        binding?.swipeRefresh?.isRefreshing = true
+
         /**
          * Request files gateway
          */
@@ -40,6 +54,7 @@ class FilesListActivity : AppCompatActivity() {
          */
         lifecycleScope.launch {
             viewModel.result.collect {
+                binding?.swipeRefresh?.isRefreshing = false
                 adapter.insertNewItems(it)
             }
         }

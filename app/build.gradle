@@ -51,6 +51,7 @@ private static void androidDesign(configuration){
     configuration.implementation 'androidx.appcompat:appcompat:1.4.1'
     configuration.implementation 'com.google.android.material:material:1.5.0'
     configuration.implementation 'androidx.navigation:navigation-ui-ktx:2.3.5'
+    configuration.implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0"
 }
 
 private static void androidTesting(configuration){
