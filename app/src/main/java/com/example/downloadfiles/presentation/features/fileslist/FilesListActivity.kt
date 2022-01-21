@@ -1,5 +1,9 @@
 package com.example.downloadfiles.presentation.features.fileslist
 
+import android.app.DownloadManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
@@ -11,6 +15,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.downloadfiles.databinding.ActivityMainBinding
 import com.example.downloadfiles.entity.uifiles.DownloadStatus
 import com.example.downloadfiles.entity.uifiles.FilesUiData
+import com.example.downloadfiles.presentation.core.DownloadFilesManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collect
@@ -104,6 +109,23 @@ class FilesListActivity : AppCompatActivity() {
             )
         }
     }
+
+    private fun startFileDownloading(
+        mainActivity: FilesListActivity,
+        url: String?,
+        fileName: String?,
+        fileData: String?
+    ) {
+
+        downloadReference = DownloadFilesManager.downloadFile(
+            mainActivity,
+            url,
+            fileName,
+            fileData
+        )
+
+    }
+
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
