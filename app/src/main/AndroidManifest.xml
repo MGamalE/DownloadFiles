@@ -10,7 +10,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.DownloadFiles">
         <activity
-            android:name=".MainActivity"
+            android:name=".presentation.features.fileslist.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
