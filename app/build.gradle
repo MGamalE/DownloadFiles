@@ -1,6 +1,8 @@
 plugins {
     id 'com.android.application'
     id 'kotlin-android'
+    id 'dagger.hilt.android.plugin'
+    id 'kotlin-kapt'
 }
 
 android {
@@ -29,6 +31,9 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
+    buildFeatures{
+        viewBinding=true
+    }
 }
 
 dependencies { configuration ->
@@ -37,6 +42,7 @@ dependencies { configuration ->
     androidTesting(configuration)
     androidKtx(configuration)
     androidNetwork(configuration)
+    androidDI(configuration)
 
 }
 
@@ -44,6 +50,7 @@ private static void androidDesign(configuration){
     configuration.implementation 'androidx.core:core-ktx:1.7.0'
     configuration.implementation 'androidx.appcompat:appcompat:1.4.1'
     configuration.implementation 'com.google.android.material:material:1.5.0'
+    configuration.implementation 'androidx.navigation:navigation-ui-ktx:2.3.5'
 }
 
 private static void androidTesting(configuration){
@@ -64,4 +71,13 @@ private static void androidNetwork(configuration){
     configuration.implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
     configuration.implementation 'com.squareup.okhttp3:okhttp:4.9.0'
     configuration.implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
+}
+
+private static void androidDI(configuration){
+    configuration.implementation("com.google.dagger:hilt-android:2.38.1")
+    configuration.kapt("com.google.dagger:hilt-android-compiler:2.38.1")
+}
+
+kapt {
+    correctErrorTypes = true
 }
