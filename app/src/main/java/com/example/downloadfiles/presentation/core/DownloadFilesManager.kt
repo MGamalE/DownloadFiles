@@ -47,7 +47,7 @@ object DownloadFilesManager {
 
         }catch (e: Exception) {
             e.printStackTrace()
-            onSnack(view,e.message.toString())
+            onSnack(view,activity.getString(R.string.error_downloading))
         }
 
         return downloadReference

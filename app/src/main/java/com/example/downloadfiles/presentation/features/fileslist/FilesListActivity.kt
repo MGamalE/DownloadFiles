@@ -16,13 +16,13 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.downloadfiles.R
 import com.example.downloadfiles.databinding.ActivityMainBinding
 import com.example.downloadfiles.entity.uifiles.DownloadStatus
 import com.example.downloadfiles.entity.uifiles.FilesUiData
 import com.example.downloadfiles.presentation.core.DownloadFilesManager
+import com.example.downloadfiles.presentation.core.isWritePermissionAllowed
 import com.example.downloadfiles.presentation.core.onSnack
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collect
@@ -46,6 +46,57 @@ class FilesListActivity : AppCompatActivity() {
 
     //Hold file model data
     private var file: FilesUiData = FilesUiData()
+
+    /**
+     * Listen to broadcast fired actions in case of downloading file is completed
+     */
+    private val broadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val id = intent?.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+
+            if (id == downloadReference) {
+                onSnack(binding?.root!!, getString(R.string.download_complete))
+                adapter.updateFiles(
+                    FilesUiData(
+                        id = file.id,
+                        name = file.name,
+                        type = file.type,
+                        url = file.url,
+                        status = DownloadStatus.COMPLETED,
+                        position = file.position
+                    ), position
+                )
+
+            }
+        }
+    }
+
+    /**
+     * Receive the callback of accessing write permission of android >= 11
+     */
+    private var resultLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+
+                if (SDK_INT >= Build.VERSION_CODES.R) {
+                    if (Environment.isExternalStorageManager()) {
+                        // perform action when allow permission success
+                        startFileDownloading(
+                            this,
+                            file.url, file.name, file.type
+                        )
+
+                    } else {
+                        Toast.makeText(
+                            this,
+                            "Allow permission for storage access!",
+                            Toast.LENGTH_SHORT
+                        )
+                            .show();
+                    }
+                }
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -100,76 +151,57 @@ class FilesListActivity : AppCompatActivity() {
                 url = fileData.url, status = DownloadStatus.PROGRESS, position = fileData.position
             )
             position = fileData.position
-            requestFileToDownload(this, fileData.url, fileData.name.toString(), fileData)
+            checkWriteRunPermission(this, fileData.url, fileData.name.toString(), fileData)
         }, mutableListOf())
 
         binding?.rvFiles?.adapter = adapter
     }
 
-    var resultLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-
-                if (SDK_INT >= Build.VERSION_CODES.R) {
-                    if (Environment.isExternalStorageManager()) {
-                        // perform action when allow permission success
-                        startFileDownloading(this,
-                            file.url, file.name, file.type)
-
-                    } else {
-                        Toast.makeText(
-                            this,
-                            "Allow permission for storage access!",
-                            Toast.LENGTH_SHORT
-                        )
-                            .show();
-                    }
-                }
-            }
-        }
 
     /**
      * This method to check for runtime permission before downloading files
      */
-    private fun requestFileToDownload(
+    private fun checkWriteRunPermission(
         activity: FilesListActivity,
         url: String?,
         name: String,
         fileData: FilesUiData
     ) {
+        /**
+         * Check if current android sdk above 30
+         */
         if (SDK_INT >= Build.VERSION_CODES.R) {
             if (Environment.isExternalStorageManager()) {
-
                 startFileDownloading(activity, url, name, fileData.type)
-
             } else {
-                try {
-                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                    intent.addCategory("android.intent.category.DEFAULT")
-                    intent.data =
-                        Uri.parse(String.format("package:%s", applicationContext.packageName))
-                    resultLauncher.launch(intent)
-                } catch (e: Exception) {
-                    val intent = Intent()
-                    intent.action = Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION
-                    resultLauncher.launch(intent)
-                }
+                requestStorageAccessForAndroid11()
             }
         } else {
-            if (ContextCompat.checkSelfPermission(
-                    activity,
-                    android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-
+            if (activity.isWritePermissionAllowed(activity)) {
                 startFileDownloading(activity, url, name, fileData.type)
-
             } else {
                 requestPermissions(
                     arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE),
                     PERMISSION_REQUEST_CODE
                 )
             }
+        }
+    }
+
+    /**
+     * Request write permission for scoped storage in android 11 and above
+     */
+    private fun requestStorageAccessForAndroid11() {
+        try {
+            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+            intent.addCategory("android.intent.category.DEFAULT")
+            intent.data =
+                Uri.parse(String.format("package:%s", applicationContext.packageName))
+            resultLauncher.launch(intent)
+        } catch (e: Exception) {
+            val intent = Intent()
+            intent.action = Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION
+            resultLauncher.launch(intent)
         }
     }
 
@@ -182,28 +214,6 @@ class FilesListActivity : AppCompatActivity() {
         fileName: String?,
         fileData: String?
     ) {
-
-        val broadcastReceiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context?, intent: Intent?) {
-                val id = intent?.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
-
-                if (id == downloadReference) {
-                    onSnack(binding?.root!!, getString(R.string.download_complete))
-                    adapter.updateFiles(
-                        FilesUiData(
-                            id = file.id,
-                            name = file.name,
-                            type = file.type,
-                            url = file.url,
-                            status = DownloadStatus.COMPLETED,
-                            position = file.position
-                        ), position
-                    )
-
-                }
-            }
-        }
-
         downloadReference = DownloadFilesManager.downloadFile(
             binding?.root!!,
             mainActivity,
@@ -212,12 +222,12 @@ class FilesListActivity : AppCompatActivity() {
             fileData,
             broadcastReceiver
         )
-
     }
 
 
+
     /**
-     * Handle runtime permission access result
+     * Receive the callback of accessing write permission of android < 10
      */
     override fun onRequestPermissionsResult(
         requestCode: Int,
