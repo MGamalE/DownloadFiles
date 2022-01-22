@@ -21,23 +21,16 @@ object DownloadFilesManager {
         broadcastReceiver: BroadcastReceiver
     ): Long {
         var downloadReference: Long = 0
-        val direct = File(
-            Environment.getExternalStorageDirectory().toString() +
-                    "/MyDownloadedFiles"
-        )
-
-        if (!direct.exists()) {
-            direct.mkdirs()
-        }
         val extension = url?.substring(url.lastIndexOf("."))
         val dm: DownloadManager =
             activity.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         val uri = Uri.parse(url?.trim()?.substring(url.lastIndexOf('(') +1))
         try {
             val request = DownloadManager.Request(uri)
+
             request.setDestinationInExternalPublicDir(
-                "/MyDownloadedFiles",
-                fileType + System.currentTimeMillis() + extension
+                Environment.DIRECTORY_DOWNLOADS,
+                "/MyDownloadedFiles/"+fileType + System.currentTimeMillis() + extension
             )
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             request.setTitle(title)
@@ -54,7 +47,7 @@ object DownloadFilesManager {
 
         }catch (e: Exception) {
             e.printStackTrace()
-            onSnack(view,activity.getString(R.string.error_downloading))
+            onSnack(view,e.message.toString())
         }
 
         return downloadReference

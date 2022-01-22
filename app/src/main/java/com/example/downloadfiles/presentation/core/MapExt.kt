@@ -17,3 +17,4 @@ fun FilesRemoteResponse.mapToUiModel(): FilesUiData = FilesUiData(
  * Mapper to map list of [FilesRemoteResponse] to list of [FilesUiData].
  */
 fun List<FilesRemoteResponse>.mapToUiModel(): List<FilesUiData> = map { it.mapToUiModel() }
+

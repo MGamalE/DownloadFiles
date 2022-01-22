@@ -1,16 +1,21 @@
 package com.example.downloadfiles.presentation.features.fileslist
 
+import android.app.Activity
 import android.app.DownloadManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
-import androidx.appcompat.app.AppCompatActivity
+import android.os.Build.VERSION.SDK_INT
 import android.os.Bundle
-import android.util.Log
+import android.os.Environment
+import android.provider.Settings
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.downloadfiles.R
@@ -20,8 +25,8 @@ import com.example.downloadfiles.entity.uifiles.FilesUiData
 import com.example.downloadfiles.presentation.core.DownloadFilesManager
 import com.example.downloadfiles.presentation.core.onSnack
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
 const val PERMISSION_REQUEST_CODE = 0
 
@@ -101,6 +106,27 @@ class FilesListActivity : AppCompatActivity() {
         binding?.rvFiles?.adapter = adapter
     }
 
+    var resultLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+
+                if (SDK_INT >= Build.VERSION_CODES.R) {
+                    if (Environment.isExternalStorageManager()) {
+                        // perform action when allow permission success
+                        startFileDownloading(this,
+                            file.url, file.name, file.type)
+
+                    } else {
+                        Toast.makeText(
+                            this,
+                            "Allow permission for storage access!",
+                            Toast.LENGTH_SHORT
+                        )
+                            .show();
+                    }
+                }
+            }
+        }
 
     /**
      * This method to check for runtime permission before downloading files
@@ -111,19 +137,39 @@ class FilesListActivity : AppCompatActivity() {
         name: String,
         fileData: FilesUiData
     ) {
-        if (ContextCompat.checkSelfPermission(
-                activity,
-                android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
+        if (SDK_INT >= Build.VERSION_CODES.R) {
+            if (Environment.isExternalStorageManager()) {
 
-            startFileDownloading(activity, url, name, fileData.type)
+                startFileDownloading(activity, url, name, fileData.type)
 
+            } else {
+                try {
+                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                    intent.addCategory("android.intent.category.DEFAULT")
+                    intent.data =
+                        Uri.parse(String.format("package:%s", applicationContext.packageName))
+                    resultLauncher.launch(intent)
+                } catch (e: Exception) {
+                    val intent = Intent()
+                    intent.action = Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION
+                    resultLauncher.launch(intent)
+                }
+            }
         } else {
-            requestPermissions(
-                arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE),
-                PERMISSION_REQUEST_CODE
-            )
+            if (ContextCompat.checkSelfPermission(
+                    activity,
+                    android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+
+                startFileDownloading(activity, url, name, fileData.type)
+
+            } else {
+                requestPermissions(
+                    arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                    PERMISSION_REQUEST_CODE
+                )
+            }
         }
     }
 
